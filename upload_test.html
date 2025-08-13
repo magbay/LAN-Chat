@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Basic Upload Test</title>
+</head>
+<body>
+    <h2>Basic Image Upload Test</h2>
+    <form id="upload-form" enctype="multipart/form-data">
+        <input type="file" id="file-input" name="file" accept="image/*">
+        <button type="submit">Upload</button>
+    </form>
+    <div id="result"></div>
+    <script>
+    document.getElementById('upload-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const fileInput = document.getElementById('file-input');
+        if (!fileInput.files.length) return alert('No file selected');
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        fetch('/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.url) {
+                document.getElementById('result').innerHTML = `<img src='${data.url}' style='max-width:300px;'><br><a href='${data.url}' target='_blank'>${data.url}</a>`;
+            } else {
+                document.getElementById('result').textContent = data.error || 'Upload failed';
+            }
+        })
+        .catch(err => {
+            document.getElementById('result').textContent = 'Upload failed: ' + (err && err.message ? err.message : err);
+        });
+    });
+    </script>
+</body>
+</html>
