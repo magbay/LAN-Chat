@@ -34,14 +34,6 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-If you don't have a `requirements.txt`, create one with:
-```
-flask
-flask-socketio
-eventlet
-itsdangerous
-```
-
 ### 4. Run the app
 ```bash
 python lan_chat.py
@@ -87,7 +79,7 @@ python lan_chat.py
 
 ---
 
-## Example requirements.txt
+## requirements.txt
 ```
 flask
 flask-socketio
