@@ -9,6 +9,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const typing = document.getElementById('typing');
     const meName = document.getElementById('me-name');
     const peerCountEl = document.getElementById('peer-count');
+    // Create side panel for online users
+    const sidePanel = document.createElement('div');
+    sidePanel.id = 'side-panel';
+    sidePanel.style = 'position:fixed;right:0;top:0;height:100vh;width:200px;background:#111827;color:#e5e7eb;padding:16px;box-shadow:-2px 0 8px #0003;z-index:10;overflow-y:auto;';
+    sidePanel.innerHTML = '<h3 style="margin-top:0;">Online Users</h3><ul id="user-list" style="list-style:none;padding:0;margin:0;"></ul>';
+    document.body.appendChild(sidePanel);
+    const userListEl = document.getElementById('user-list');
 
     function esc(s) {
         return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
@@ -54,7 +61,16 @@ document.addEventListener('DOMContentLoaded', function() {
     socket.on('chat', addMessage);
 
     socket.on('peerCount', count => {
-        peerCountEl.textContent = count;
+        peerCountEl.textContent = count + ' online';
+    });
+
+    socket.on('user_list', users => {
+        userListEl.innerHTML = '';
+        users.forEach(nick => {
+            const li = document.createElement('li');
+            li.textContent = nick;
+            userListEl.appendChild(li);
+        });
     });
 
     socket.on('typing', (data) => {

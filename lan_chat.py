@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 import os
+from dotenv import load_dotenv
+load_dotenv()
 #!/usr/bin/env python3
 """
 LAN Anonymous Chat – single-file Python app
@@ -24,7 +26,7 @@ without adding auth, rate limiting, TLS, and hardening.
 
 import secrets
 import socket
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Dict, Set
 
 
@@ -32,6 +34,14 @@ from flask import Flask, request, make_response, send_from_directory
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask import jsonify
 from werkzeug.utils import secure_filename
+
+
+# Load AI config from environment
+AI_API_TYPE = os.getenv("AI_API_TYPE", "lmstudio")
+AI_API_URL = os.getenv("AI_API_URL", "http://localhost:1234/v1/chat/completions")
+AI_MODEL = os.getenv("AI_MODEL", "your-model-name")
+AI_NAME = os.getenv("AI_NAME", "LanAI")
+AI_FULL_NAME = os.getenv("AI_FULL_NAME", "LanAI Bot")
 
 app = Flask(__name__)
 
@@ -187,9 +197,10 @@ def on_join(data):
     print(f"[DEBUG] USERS after join: {USERS}")
     join_room(ROOM)
     emit("user_count", len(USERS), to=ROOM)
+    emit("user_list", list(USERS.values()), to=ROOM)
     emit(
         "chat",
-        {"nickname": "system", "text": f"{nickname} joined", "ts": datetime.utcnow().isoformat()},
+        {"nickname": "system", "text": f"{nickname} joined", "ts": datetime.now(UTC).isoformat()},
         to=ROOM,
     )
 
@@ -203,10 +214,12 @@ def on_disconnect():
     if nickname:
         emit(
             "chat",
-            {"nickname": "system", "text": f"{nickname} left", "ts": datetime.utcnow().isoformat()},
+            {"nickname": "system", "text": f"{nickname} left", "ts": datetime.now(UTC).isoformat()},
             to=ROOM,
         )
         emit("typing", {"list": [USERS[s] for s in TYPING if s in USERS]}, to=ROOM)
+        emit("user_count", len(USERS), to=ROOM)
+        emit("user_list", list(USERS.values()), to=ROOM)
 
 @socketio.on("chat")
 def on_chat(data):
@@ -217,7 +230,7 @@ def on_chat(data):
     if not text:
         return
 
-    payload = {"nickname": nickname, "text": text[:2000], "ts": datetime.utcnow().isoformat()}
+    payload = {"nickname": nickname, "text": text[:2000], "ts": datetime.now(UTC).isoformat()}
     emit("chat", payload, to=ROOM)
 
 @socketio.on("typing")
@@ -246,10 +259,11 @@ def get_lan_ip() -> str:
             pass
     return ip
 
+
+
 # -------------------- Entrypoint --------------------
 if __name__ == "__main__":
     ip = get_lan_ip()
     print("\nLAN Chat running!")
     print(f"Open  ->  http://{ip}:5000  (from any device on your LAN)\n")
-    # host=0.0.0.0 binds on all interfaces so others on the LAN can connect
     socketio.run(app, host="0.0.0.0", port=5000)
