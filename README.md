@@ -1,4 +1,39 @@
 # LAN Chat App
+A simple, anonymous real-time chat application for your local network, built with Python, Flask, and Socket.IO. Supports text and image messages, user count, image uploads, and an optional AI chatbot user powered by LM Studio or Ollama.
+
+## AI Chatbot User
+The app includes an optional AI user (`ai_user.py`) that joins the chat and responds to questions, mentions, or randomly. The AI user is configurable via the `.env` file and can use LM Studio or Ollama as a backend.
+
+## Quick Setup
+1. Clone the repository and enter the folder.
+2. Create and activate a Python virtual environment.
+3. Install dependencies: `pip install -r requirements.txt`
+4. Edit `.env` to configure AI settings (see below).
+5. Run the chat server: `python lan_chat.py`
+6. (Optional) Start the AI user: `python ai_user.py`
+7. Open your browser to `http://localhost:5000` or your LAN IP.
+
+## .env Example
+```
+AI_API_TYPE=lmstudio
+AI_API_URL=http://localhost:1234/v1/chat/completions
+AI_MODEL=openai/gpt-oss-20b
+AI_NAME=""
+AI_FULL_NAME=LanAI Bot
+AI_SERVER_URL=http://localhost:5000
+AI_RESPONSE_PROBABILITY=0.1
+```
+
+## requirements.txt
+```
+flask
+flask-socketio
+eventlet
+itsdangerous
+requests
+python-dotenv
+python-socketio
+```
 
 A simple, anonymous real-time chat application for your local network, built with Python, Flask, and Socket.IO. Supports text and image messages, user count, and image uploads.
 
