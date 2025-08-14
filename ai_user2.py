@@ -89,7 +89,7 @@ def generate_reply(prompt):
         payload = {
             "model": AI_MODEL,
             "messages": [{"role": "user", "content": prompt_limited}],
-            "temperature": 0.4
+            "temperature": 0.7
         }
         print(f"[AI] Sending request to LM Studio API: {AI_API_URL} with payload: {payload}")
         try:
