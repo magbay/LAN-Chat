@@ -8,11 +8,18 @@ import requests
 import socketio
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
-AI_API_TYPE = os.getenv("AI_API_TYPE", "lmstudio")
-AI_API_URL = os.getenv("AI_API_URL", "http://100.105.223.109:1234")
-AI_MODEL = os.getenv("AI_MODEL", "openai/gpt-oss-20b")
+print("[AI] Startup configuration:")
+print(f"[AI]   API_TYPE: {os.getenv('AI_API_TYPE')}")
+print(f"[AI]   API_URL:  {os.getenv('AI_API_URL')}")
+print(f"[AI]   MODEL:    {os.getenv('AI_MODEL')}")
+print(f"[AI]   SERVER:   {os.getenv('AI_SERVER_URL')}")
+
+AI_API_TYPE = os.getenv("AI_API_TYPE", "ollama")
+AI_API_URL = os.getenv("AI_API_URL", "http://10.107.101.37:11434/v1/chat/completions")
+AI_MODEL = os.getenv("AI_MODEL", "qwen3:8b")
 AI_NAME = random_nickname()
 AI_FULL_NAME = os.getenv("AI_FULL_NAME", "LanAI Bot")
 SERVER_URL = os.getenv("AI_SERVER_URL", "http://localhost:5000")
@@ -86,7 +93,6 @@ def disconnect():
 
 def generate_reply(prompt):
     if AI_API_TYPE == "lmstudio":
-        # Instruct the model to reply concisely and only answer the question
         prompt_limited = f"{prompt}\nAnswer concisely and directly. Only provide the answer, no extra commentary."
         payload = {
             "model": AI_MODEL,
@@ -97,10 +103,10 @@ def generate_reply(prompt):
         try:
             r = requests.post(AI_API_URL, json=payload, timeout=10)
             print(f"[AI] API response status: {r.status_code}")
+            print(f"[AI] API response text: {r.text}")
             r.raise_for_status()
             data = r.json()
-            print(f"[AI] API response data: {data}")
-            if "choices" not in data:
+            if "choices" not in data or not data["choices"]:
                 print("[AI] Full response (no 'choices'):", data)
                 return f"[AI error: No 'choices' in response: {data}]"
             return data["choices"][0]["message"]["content"]
@@ -111,23 +117,61 @@ def generate_reply(prompt):
         prompt_limited = f"{prompt}\nYou are a helpful, friendly, and concise chat assistant."
         payload = {
             "model": AI_MODEL,
-            "prompt": prompt_limited
+            "messages": [{"role": "user", "content": prompt_limited}]
         }
-        try:
-            r = requests.post(AI_API_URL, json=payload, timeout=10)
-            r.raise_for_status()
-            data = r.json()
-            return data.get("response", "[No response]")
-        except Exception as e:
-            return f"[AI error: {e}]"
+        # Configurable retries and wait time
+        max_retries = int(os.getenv("OLLAMA_RETRIES", 10))
+        retry_wait = int(os.getenv("OLLAMA_RETRY_WAIT", 5))
+        for attempt in range(max_retries):
+            print(f"[AI] Sending request to Ollama API: {AI_API_URL} with payload: {payload} (attempt {attempt+1}/{max_retries})")
+            try:
+                r = requests.post(AI_API_URL, json=payload, timeout=30)
+                print(f"[AI] API response status: {r.status_code}")
+                print(f"[AI] API response text: {r.text}")
+                r.raise_for_status()
+                data = r.json()
+                reply = None
+                if "choices" in data and data["choices"]:
+                    reply = data["choices"][0].get("text") or data["choices"][0].get("message", {}).get("content")
+                elif data.get("response") is not None:
+                    reply = data["response"]
+                # Retry if model is still loading or reply is empty
+                if data.get("done_reason") == "load" or (reply is not None and str(reply).strip() == ""):
+                    print(f"[AI] Model still loading, waiting {retry_wait}s before retry... (Attempt {attempt+1}/{max_retries})")
+                    time.sleep(retry_wait)
+                    continue
+                if reply:
+                    return str(reply).strip()
+                print("[AI] Full response (no usable reply):", data)
+                return "[No response from model]"
+            except Exception as e:
+                print(f"[AI] Exception during API call: {e}")
+                time.sleep(retry_wait)
+        return "[No response from model after retries]"
     else:
         return "[AI not configured]"
 
+def test_ollama_model():
+    """Test if Ollama model is ready and can generate a response."""
+    test_message = "Hello, are you there?"
+    print("[TEST] Testing Ollama model with a simple prompt...")
+    reply = generate_reply(test_message)
+    if reply and not reply.startswith('[No response'):
+        print(f"[TEST] Model reply: {reply}")
+        print("[TEST] Ollama model is ready and functional.")
+        return True
+    else:
+        print("[TEST] Model did not reply after retries. It may still be loading or unavailable.")
+        return False
+
 if __name__ == "__main__":
-    while True:
-        try:
-            sio.connect(SERVER_URL)
-            sio.wait()
-        except Exception as e:
-            print(f"[AI] Connection error: {e}. Retrying in 5 seconds...")
-            time.sleep(5)
+    if len(sys.argv) > 1 and sys.argv[1] == "test":
+        test_ollama_model()
+    else:
+        while True:
+            try:
+                sio.connect(SERVER_URL)
+                sio.wait()
+            except Exception as e:
+                print(f"[AI] Connection error: {e}. Retrying in 5 seconds...")
+                time.sleep(5)

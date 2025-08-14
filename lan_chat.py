@@ -26,7 +26,7 @@ without adding auth, rate limiting, TLS, and hardening.
 
 import secrets
 import socket
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from typing import Dict, Set
 
 
@@ -37,8 +37,8 @@ from werkzeug.utils import secure_filename
 
 
 # Load AI config from environment
-AI_API_TYPE = os.getenv("AI_API_TYPE", "lmstudio")
-AI_API_URL = os.getenv("AI_API_URL", "http://localhost:1234/v1/chat/completions")
+AI_API_TYPE = os.getenv("AI_API_TYPE", "ollama")
+AI_API_URL = os.getenv("AI_API_URL", "http://10.107.101.37:11434/api/generate")
 AI_MODEL = os.getenv("AI_MODEL", "your-model-name")
 AI_NAME = os.getenv("AI_NAME", "LanAI")
 AI_FULL_NAME = os.getenv("AI_FULL_NAME", "LanAI Bot")
@@ -203,7 +203,7 @@ def on_join(data):
     emit("user_list", list(USERS.values()), to=ROOM)
     emit(
         "chat",
-        {"nickname": "system", "text": f"{nickname} joined", "ts": datetime.now(UTC).isoformat()},
+    {"nickname": "system", "text": f"{nickname} joined", "ts": datetime.now(timezone.utc).isoformat()},
         to=ROOM,
     )
 
@@ -217,7 +217,7 @@ def on_disconnect():
     if nickname:
         emit(
             "chat",
-            {"nickname": "system", "text": f"{nickname} left", "ts": datetime.now(UTC).isoformat()},
+            {"nickname": "system", "text": f"{nickname} left", "ts": datetime.now(timezone.utc).isoformat()},
             to=ROOM,
         )
         emit("typing", {"list": [USERS[s] for s in TYPING if s in USERS]}, to=ROOM)
@@ -233,7 +233,7 @@ def on_chat(data):
     if not text:
         return
 
-    payload = {"nickname": nickname, "text": text[:2000], "ts": datetime.now(UTC).isoformat()}
+    payload = {"nickname": nickname, "text": text[:2000], "ts": datetime.now(timezone.utc).isoformat()}
     emit("chat", payload, to=ROOM)
 
 @socketio.on("typing")
