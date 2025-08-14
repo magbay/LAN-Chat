@@ -2,3 +2,7 @@ flask
 flask-socketio
 eventlet
 itsdangerous
+
+requests
+python-dotenv
+python-socketio
