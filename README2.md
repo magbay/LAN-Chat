@@ -1,40 +1,133 @@
-import os
-import sys
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lan_chat import random_nickname
-import time
-import random
-import requests
-import socketio
-from dotenv import load_dotenv
+# README2: Beginner's Guide to lan_chat.py and ai_user.py
 
+This guide explains, line by line and in plain language, how the two main files in this chat app work:
+- `lan_chat.py`: The main chat server and web app
+- `ai_user.py`: The AI bot that joins the chat and replies to users
 
-load_dotenv()
+---
 
+## lan_chat.py (The Chat Server)
+
+**Imports and Setup**
+- `from __future__ import annotations`: Enables some future Python features.
+- `import os`, `import secrets`, `import socket`, etc.: Loads standard Python modules for environment, security, networking, and time.
+- `from dotenv import load_dotenv`: Lets you load settings from a `.env` file.
+- `load_dotenv()`: Loads environment variables from `.env`.
+- `from flask import ...`: Imports Flask, a web framework for Python.
+- `from flask_socketio import ...`: Imports Flask-SocketIO for real-time chat.
+- `from werkzeug.utils import secure_filename`: Helps safely save uploaded files.
+
+**AI Config**
+- Loads AI settings (like model and API URL) from environment variables.
+
+**Flask App and Uploads**
+- `app = Flask(__name__)`: Creates the web app.
+- Sets up a folder for image uploads and allowed file types.
+- Functions to check if a file is allowed and to handle uploads.
+- Routes to serve uploaded files and static files.
+
+**Web UI**
+- The `/` route serves a simple HTML chat page with a nickname and chat box.
+- The HTML includes CSS for styling and JavaScript for chat features.
+
+**Socket.IO Events**
+- Handles real-time events:
+  - `join`: When a user joins, assigns a nickname and notifies others.
+  - `disconnect`: When a user leaves, removes them and notifies others.
+  - `chat`: When a user sends a message, broadcasts it to everyone.
+  - `typing`: Shows who is typing.
+
+**Utilities**
+- `random_nickname()`: Makes fun nicknames like "calm-otter-42".
+- `get_lan_ip()`: Finds your computer's LAN IP address.
+
+**Entrypoint**
+- If you run this file directly, it starts the server and prints the URL to join the chat from any device on your network.
+
+---
+
+## ai_user.py (The AI Bot)
+
+**Imports and Setup**
+- Loads modules for networking, random numbers, HTTP requests, and environment variables.
+- Loads settings from `.env` and prints them for debugging.
+- Picks a random nickname for the AI bot.
+- Connects to the chat server using Socket.IO.
+
+**Socket.IO Events**
+- `connect`: When the AI bot connects, it joins the chat room.
+- `chat`: When a message is received, the bot decides if it should reply:
+  - Ignores its own messages and system messages.
+  - Replies if its name is mentioned, if the message is a question, or at random.
+  - Sends a reply using the `generate_reply` function.
+  - Sometimes sends a fun fact or tip.
+- `disconnect`: Prints a message if the bot disconnects.
+
+**AI Reply Logic**
+- `generate_reply(prompt)`: Sends the user's message to the AI API (Ollama or LM Studio) and gets a reply.
+  - Tries multiple times if the model is still loading.
+  - Handles errors and prints debug info.
+
+**Testing the AI**
+- `test_ollama_model()`: Lets you test if the AI model is ready by running `python ai_user.py test`.
+
+**Entrypoint**
+- If you run this file directly, it either runs the test or connects the bot to the chat server and keeps it running.
+
+---
+
+## ai_user.py (AI Bot) - Full Code with Comments
+
+```python
+import os  # For environment variables
+import sys  # For system-specific parameters and functions
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # Add current directory to Python path
+from lan_chat import random_nickname  # Import nickname generator from lan_chat.py
+import time  # For time-related functions (like sleep)
+import random  # For random number generation
+import requests  # For making HTTP requests to the AI API
+import socketio  # For connecting to the chat server via Socket.IO
+from dotenv import load_dotenv  # For loading environment variables from .env file
+
+load_dotenv()  # Load environment variables from .env file
+
+# Print out the current configuration for debugging
 print("[AI] Startup configuration:")
 print(f"[AI]   API_TYPE: {os.getenv('AI_API_TYPE')}")
 print(f"[AI]   API_URL:  {os.getenv('AI_API_URL')}")
 print(f"[AI]   MODEL:    {os.getenv('AI_MODEL')}")
 print(f"[AI]   SERVER:   {os.getenv('AI_SERVER_URL')}")
 
+# Read configuration from environment variables, with defaults
 AI_API_TYPE = os.getenv("AI_API_TYPE", "ollama")
 AI_API_URL = os.getenv("AI_API_URL", "http://10.107.101.37:11434/v1/chat/completions")
 AI_MODEL = os.getenv("AI_MODEL", "qwen3:8b")
-AI_NAME = random_nickname()
+AI_NAME = random_nickname()  # Generate a random nickname for the AI bot
 AI_FULL_NAME = os.getenv("AI_FULL_NAME", "LanAI Bot")
 SERVER_URL = os.getenv("AI_SERVER_URL", "http://localhost:5000")
 
-sio = socketio.Client()
+sio = socketio.Client()  # Create a Socket.IO client instance
 
-last_message_ts = None
+last_message_ts = None  # Track the timestamp of the last message
 
 @sio.event
+# This function runs when the AI bot connects to the chat server
+# It joins the chat room with its nickname
 def connect():
     print(f"[AI] Connected to chat server as {AI_NAME}")
     sio.emit("join", {"nickname": AI_NAME})
     # Do not send any initial response after login
 
 @sio.event
+# This function runs when a chat message is received
+# It decides whether the AI should reply
+# It ignores its own messages and system messages
+# Replies if its name is mentioned, if the message is a question, or at random
+# Sometimes sends a fun fact or tip
+# Uses generate_reply() to get a response from the AI model
+# Sends the reply back to the chat
+# Also prints debug info
+#
 def chat(data):
     global last_message_ts
     print(f"[AI] Received chat event: {data}")
@@ -88,9 +181,17 @@ def chat(data):
         sio.emit("chat", {"text": info})
 
 @sio.event
+# This function runs when the AI bot disconnects from the chat server
+# It just prints a message
+#
 def disconnect():
     print("[AI] Disconnected from chat server.")
 
+# This function sends a prompt to the AI API and returns the reply
+# It supports both LM Studio and Ollama APIs
+# It retries if the model is still loading
+# Handles errors and prints debug info
+#
 def generate_reply(prompt):
     if AI_API_TYPE == "lmstudio":
         prompt_limited = f"{prompt}\nAnswer concisely and directly. Only provide the answer, no extra commentary."
@@ -151,6 +252,8 @@ def generate_reply(prompt):
     else:
         return "[AI not configured]"
 
+# This function tests if the AI model is ready and can generate a response
+# You can run it with: python ai_user.py test
 def test_ollama_model():
     """Test if Ollama model is ready and can generate a response."""
     test_message = "Hello, are you there?"
@@ -164,6 +267,7 @@ def test_ollama_model():
         print("[TEST] Model did not reply after retries. It may still be loading or unavailable.")
         return False
 
+# Main entrypoint: if run directly, either test the model or connect to the chat server
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "test":
         test_ollama_model()
@@ -175,3 +279,8 @@ if __name__ == "__main__":
             except Exception as e:
                 print(f"[AI] Connection error: {e}. Retrying in 5 seconds...")
                 time.sleep(5)
+```
+
+---
+
+*The full commented code for lan_chat.py will be added next. This file may be very large. Let me know if you want the full code with comments in a separate file or split into sections for easier reading!*
