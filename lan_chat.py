@@ -130,30 +130,33 @@ def index():
         <title>LAN Chat</title>
         <style>
             :root {{
-                --bg: #0f172a;         /* slate-900 */
-                --panel: #111827;      /* gray-900 */
-                --muted: #94a3b8;      /* slate-400 */
-                --text: #e5e7eb;       /* gray-200 */
-                --accent: #22d3ee;     /* cyan-400 */
-                --me: #10b981;         /* emerald-500 */
-                --other: #3b82f6;      /* blue-500 */
+                --bg: #0f172a;
+                --panel: #111827;
+                --muted: #94a3b8;
+                --text: #e5e7eb;
+                --accent: #22d3ee;
+                --me: #10b981;
+                --other: #3b82f6;
             }}
             * {{ box-sizing: border-box; }}
             body {{ margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; background: var(--bg); color: var(--text); }}
-            .wrap {{ min-height: 100dvh; display: grid; grid-template-rows: auto 1fr auto; }}
-            header {{ padding: 12px 16px; background: var(--panel); border-bottom: 1px solid #1f2937; display:flex; gap:12px; align-items:center; }}
+            .wrap {{ min-height: 100dvh; display: grid; grid-template-columns: 0px 85vw; grid-template-rows: auto 1fr auto; }}
+            header {{ grid-column: 1 / span 2; padding: 12px 16px; background: var(--panel); border-bottom: 1px solid #1f2937; display:flex; gap:12px; align-items:center; }}
             header h1 {{ margin: 0; font-size: 18px; letter-spacing: 0.3px; }}
             header .chip {{ padding: 4px 10px; background:#0b3b3c; border:1px solid #124e51; border-radius:999px; font-size:12px; color:#a7f3d0; }}
-            #messages {{ list-style: none; margin:0; padding: 16px; display:flex; flex-direction:column; gap:10px; }}
-            #messages li {{ max-width: 800px; padding: 10px 12px; border-radius: 12px; background: #0b1220; box-shadow: 0 1px 0 #1f2937 inset; }}
-            #messages li.me {{ border: 1px solid rgba(16,185,129,.35); }}
-            #messages li.other {{ border: 1px solid rgba(59,130,246,.35); }}
-            .meta {{ font-size: 11px; color: var(--muted); margin-bottom: 4px; }}
-            .footer {{ padding: 12px; background: var(--panel); border-top: 1px solid #1f2937; }}
-            form {{ display:flex; gap:10px; }}
-            input[type=text] {{ flex:1; padding: 12px 14px; border-radius: 10px; border:1px solid #374151; background:#0b1220; color:var(--text); outline:none; }}
-            button {{ padding: 12px 16px; border-radius: 10px; border:none; background: var(--accent); color:#05252b; font-weight: 700; cursor: pointer; }}
-            #typing {{ height: 20px; padding: 0 16px; font-size: 12px; color: var(--muted); }}
+            .sidebar h2 {{ font-size: 14px; margin: 0 0 8px 0; color: var(--muted); }}
+            #user-list {{ list-style: none; padding: 0; margin: 0; }}
+                #user-list li {{ font-size: 12px; color: var(--text); padding: 2px 0; border-bottom: 1px solid #222; }}
+                #messages {{ list-style: none; margin:0; padding: 16px; display:flex; flex-direction:column; gap:10px; width:85%; }}
+                #messages li {{ max-width: 800px; padding: 10px 12px; border-radius: 12px; background: #0b1220; box-shadow: 0 1px 0 #1f2937 inset; }}
+                #messages li.me {{ border: 1px solid rgba(16,185,129,.35); }}
+                #messages li.other {{ border: 1px solid rgba(59,130,246,.35); }}
+                .meta {{ font-size: 11px; color: var(--muted); margin-bottom: 4px; }}
+                .footer {{ grid-column: 2; padding: 12px; background: var(--panel); border-top: 1px solid #1f2937; }}
+                form {{ display:flex; gap:10px; }}
+                input[type=text] {{ flex:1; padding: 12px 14px; border-radius: 10px; border:1px solid #374151; background:#0b1220; color:var(--text); outline:none; }}
+                button {{ padding: 12px 16px; border-radius: 10px; border:none; background: var(--accent); color:#05252b; font-weight: 700; cursor: pointer; }}
+                #typing {{ height: 20px; padding: 0 16px; font-size: 12px; color: var(--muted); }}
         </style>
     </head>
     <body>
@@ -161,18 +164,18 @@ def index():
             <header>
                 <h1>LAN Chat</h1>
                 <span class="chip">You are <strong id="me-name">{nickname}</strong></span>
-                <span id="peer-count" class="chip" style="background:#13213a;border-color:#1e3a8a;color:#bfdbfe;">0 online</span>
             </header>
-
-            <ul id="messages"></ul>
-            <div id="typing"></div>
-
-            <div class="footer">
-                <form id="form">
-                    <input id="input" type="text" autocomplete="off" placeholder="Type a message…" />
-                    <button>Send</button>
-                </form>
-            </div>
+            <!-- Online users sidebar removed -->
+            <main style="grid-column: 2; width: 85vw;">
+                <ul id="messages"></ul>
+                <div id="typing"></div>
+                <div class="footer">
+                    <form id="form">
+                        <input id="input" type="text" autocomplete="off" placeholder="Type a message…" />
+                        <button>Send</button>
+                    </form>
+                </div>
+            </main>
         </div>
 
     <script src="https://cdn.jsdelivr.net/npm/socket.io-client@3.1.3/dist/socket.io.min.js"></script>
